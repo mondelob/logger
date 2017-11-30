@@ -9,7 +9,7 @@ CC_LIBRARY=-c
 CC_OUTPUT=-o
 
 # Targets
-LIBRARY=obj obj/logger.o
+LIBRARY=obj obj/yalog.o
 TARGETS=bin obj obj/test.o bin/test
 
 # Rules
@@ -22,14 +22,14 @@ obj:
 bin:
 	@mkdir -p bin/
 
-obj/logger.o: lib/logger.c
+obj/yalog.o: lib/yalog.c
 	$(CC) $(CC_FLAGS) $(CC_LIBRARY) $(CC_OUTPUT) $@ $<
 
 obj/test.o: test.c
-	$(CC) $(CC_FLAGS) $(CC_LIBRARY) $(CC_OUTPUT) $@ $<
+	$(CC) $(CC_DEPS) $(CC_FLAGS) $(CC_LIBRARY) $(CC_OUTPUT) $@ $<
 
-bin/test: obj/test.o obj/logger.o
-	$(CC) $(CC_FLAGS) $(CC_OUTPUT) $@ $<
+bin/test: obj/test.o obj/yalog.o
+	$(CC) $(CC_FLAGS) $(CC_OUTPUT) $@ $?
 
 clean:
 	@rm -rf bin/
