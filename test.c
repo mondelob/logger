@@ -6,13 +6,17 @@
 
 int
 main(void) {
-  printf("Log num: %d\n", yalogfd(STDOUT_FILENO));
-  printf("Log num: %d\n", yalogfn(FILENAME));
-  yalog_close(0);
-  yalog_close(1);
+  int mylog;
+
+  // if ((mylog = yalogfd(STDOUT_FILENO)) < 0) {
+  if ((mylog = yalogfn(FILENAME)) < 0) {
+    perror("error creating log");
+    return 1;
+  }
+
+  yalog_async_write(mylog, "Hello World!\n");
+
   yalog_end();
-  printf("Log num: %d\n", yalogfd(STDOUT_FILENO));
-  yalog_close(0);
-  yalog_end();
+
   return 0;
 }
