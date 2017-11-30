@@ -193,6 +193,11 @@ _write_log(struct _args * argv) {
     return -2;
   }
 
+  if (_write_descriptor(l->l_fd, "\n", 1) < 0) {
+    perror("_write_log : error writing new line to descriptor");
+    return -3;
+  }
+
   if (sem_post(l->l_write) != 0) {
     perror("_write_log : error posting semaphore");
     return -3;

@@ -14,7 +14,8 @@ main(void) {
     return 1;
   }
 
-  yalog_async_write(mylog, "Hello World!\n");
+  yalog_async_write(mylog, "Hello World!");
+  yalog_async_write(mylog, "Bye World!");
 
   yalog_end();
 
