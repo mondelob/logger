@@ -2,8 +2,10 @@
 # 2017-11-30
 
 # Ignore all binaries directories
+bin/*
 */bin/*
 
 # Ignore all objects directories and objects
+bin/*
 */obj/*
 *.o
