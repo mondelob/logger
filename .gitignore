@@ -1,0 +1,9 @@
+# .gitignore - logger
+# 2017-11-30
+
+# Ignore all binaries directories
+*/bin/*
+
+# Ignore all objects directories and objects
+*/obj/*
+*.o
