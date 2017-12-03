@@ -27,11 +27,11 @@
 #ifndef YALOG_H
 #define YALOG_H
 
-int yalogfn(char * filename);
-/* Initializes an instance of the logger with a filename */
-
 int yalogfd(int fd);
 /* Initializes an instance of the logger with an open file descriptor */
+
+int yalogfn(char * filename);
+/* Initializes an instance of the logger with a filename */
 
 int yalog_sync_write(int numlog, const char * buf);
 /* Writes to log sync */

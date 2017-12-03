@@ -208,6 +208,23 @@ _write_log(struct _args * argv) {
 /* Writes to a log */
 
 int
+yalogfd(int fd) {
+  struct _log * l;
+  int index;
+
+  l = malloc(sizeof(struct _log));
+  if (_create_log(l, fd, 1) < 0) {
+    perror("yalogfn : error creating log");
+    return -2;
+  }
+
+  index = _add_log(l);
+
+  return index;
+}
+/* Initializes an instance of the logger with an open file descriptor */
+
+int
 yalogfn(char * filename) {
   struct _log * l;
   int fd, index;
@@ -228,23 +245,6 @@ yalogfn(char * filename) {
   return index;
 }
 /* Initializes an instance of the logger with a filename */
-
-int
-yalogfd(int fd) {
-  struct _log * l;
-  int index;
-
-  l = malloc(sizeof(struct _log));
-  if (_create_log(l, fd, 1) < 0) {
-    perror("yalogfn : error creating log");
-    return -2;
-  }
-
-  index = _add_log(l);
-
-  return index;
-}
-/* Initializes an instance of the logger with an open file descriptor */
 
 int
 yalog_sync_write(int numlog, const char * buf) {
