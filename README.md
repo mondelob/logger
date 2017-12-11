@@ -83,7 +83,7 @@ yalog_end();
 - [x] Filename support
 - [x] Synchronous and asynchronous writing
 - [x] Max lenght or size for created files (file base)
-- [ ] Add time stamp to all the log lines
+- [x] Add time stamp to all the log lines
 - [ ] Clear memory allocated arrays
 - [ ] Portability
 - [ ] Installer
