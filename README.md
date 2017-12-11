@@ -23,29 +23,51 @@ int mylog_a = yalogfd(fd);
 /* This will return the number of your log */
 ```
 
-Also you can start a log specifing the name of the desired log with a *char \**:
+You can start a log specifing the name of the desired log with a *char \**:
 
 ```c
 const char * myfile = "my_first_log.log";
 /* The file */
 
 int mylog_b = yalogfn(myfile);
+/* This will return the number of your log */
+```
+
+Also you could specify a base name and a max lines per log file, and *yalog*
+will create progressively the log files. On the startup will search for the old
+logs and read the number of lines and the first file will be the one with the
+number of lines less than the specified. (Known bug: if you change your max
+lines on different executions to an upper number, may cause to *yalog* write on
+a old log file. This will be fixed)
+
+```c
+const char * basefile = "not_my_first_log";
+/* The basename file. Logs will be named not_my_first_log-X.log being X the
+   number */
+
+int maxlines = 250;
+/* Maximum number of lines per log. When this number is reached yalog will open
+   the next file */
+
+int mylog_c = yalogml(basefile, maxlines);
+/* This will return the number of your log */
 ```
 
 Once you have an open log, now you can write *synchronous* or *asynchronous* to
-the log;
+the log, doesn't matter how you opened the log:
 
 ```c
 yalog_sync_write(mylog_a, "Hello World!\n");
 /* Synchronous writing */
 
 yalog_async_write(mylog_b, "Bye World!\n");
+yalog_async_write(mylog_c, "Ooooh!\n");
 /* Asynchronous writing */
 ```
 
 Once your done with your log you can close it the log. This is not necessary,
 but once you end, you should run *yalog_end* to clear all memory usage and
-close all the log's that are still openned:
+close all the log's that are still opened:
 
 ```c
 yalog_close(mylog_a);
