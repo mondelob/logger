@@ -60,7 +60,7 @@ yalog_end();
 - [x] File descriptor support
 - [x] Filename support
 - [x] Synchronous and asynchronous writing
-- [ ] Max lenght or size for created files (file base)
+- [x] Max lenght or size for created files (file base)
 - [ ] Clear memory allocated arrays
 - [ ] Portability
 - [ ] Installer
