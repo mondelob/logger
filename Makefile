@@ -3,7 +3,7 @@
 
 # Compiler
 CC=gcc
-CC_FLAGS=-Wall -std=c99 -pthread
+CC_FLAGS=-Wall -std=c99 -pthread -lm
 CC_DEPS=-Ilib
 CC_LIBRARY=-c
 CC_OUTPUT=-o
@@ -23,13 +23,13 @@ bin:
 	@mkdir -p bin/
 
 obj/yalog.o: lib/yalog.c
-	$(CC) $(CC_FLAGS) $(CC_LIBRARY) $(CC_OUTPUT) $@ $<
+	$(CC) $(CC_LIBRARY) $(CC_OUTPUT) $@ $< $(CC_FLAGS)
 
 obj/test.o: test.c
 	$(CC) $(CC_DEPS) $(CC_FLAGS) $(CC_LIBRARY) $(CC_OUTPUT) $@ $<
 
 bin/test: obj/test.o obj/yalog.o
-	$(CC) $(CC_FLAGS) $(CC_OUTPUT) $@ $?
+	$(CC) $(CC_OUTPUT) $@ $? $(CC_FLAGS)
 
 clean:
 	@rm -rf bin/

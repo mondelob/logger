@@ -28,7 +28,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include<pthread.h>
+#include <math.h>
+#include <pthread.h>
 #include <semaphore.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -44,11 +45,20 @@ struct _threads {
 };
 /* Structure of the subthreads on a log */
 
+struct _set {
+  int s_lines;          /* Actual count of lines */
+  int s_maxlines;       /* The maximum lines per file */
+  char * s_basename;    /* The base name of all the files */
+  int s_index;          /* Number of file */
+};
+/* Structure to determine the logs with a maximum number of lines */
+
 struct _log {
-  int l_fd;                 /* The file descriptor to write */
-  int l_isfile;             /* Set when file is openned by yalog */
-  sem_t * l_write;          /* Write semaphore */
-  struct _threads * l_tid;  /* Set of subthreads */
+  int l_fd;                   /* The file descriptor to write */
+  int l_isfile;               /* Set when file is openned by yalog */
+  sem_t * l_write;            /* Write semaphore */
+  struct _threads * l_tid;    /* Set of subthreads */
+  struct _set * l_set;        /* Set of progressive logs */
 };
 /* Structure for the logs */
 
@@ -68,24 +78,27 @@ static struct _log ** _logs;
 /* Array containing all log pointers */
 
 int
-_create_log(struct _log * l, int fd, int isfile) {
-  sem_t * s;
+_create_log(struct _log * l, int fd, int isfile, struct _set * s) {
+  sem_t * sp;
   struct _threads * tid;
 
   l->l_fd = fd;
   l->l_isfile = isfile;
 
-  s = malloc(sizeof(sem_t));
-  if (sem_init(s, 0, 1) < 0) {
+  sp = malloc(sizeof(sem_t));
+  if (sem_init(sp, 0, 1) < 0) {
     perror("_create_log : error creating semaphore");
     return -1;
   }
-  l->l_write = s;
+  l->l_write = sp;
 
   tid = malloc(sizeof(struct _threads));
   tid->t_num = 0;
   tid->t_len = 0;
+  tid->t_tid = NULL;
   l->l_tid = tid;
+
+  l->l_set = s;
 
   return 0;
 }
@@ -106,6 +119,120 @@ _create_thread(struct _log * l) {
   return l->l_tid->t_num++;
 }
 /* Creates a thread and assigns the thread to the list */
+
+int
+_file_exists(char * filename) {
+  if (access(filename, F_OK) < 0)
+    return -1;
+  else
+    return 1;
+}
+/* Checks if a file exists */
+
+char *
+_create_name(char * basename, int index) {
+  char * str;
+  int digits;
+  if (index == 0)
+    digits = 0;
+  else
+    digits = floor(log10(abs(index))) + 1;
+  str = malloc(sizeof(char) * (strlen(basename) + 1 + digits + 4 + 2));
+  sprintf(str, "%s-%d.log", basename, index);
+  return str;
+}
+/* Creates a string containing the log name must be freed */
+
+int
+_open_file(const char * filename, int flags) {
+  int fd;
+
+  if ((fd = open(filename, flags, 0644)) < 0)
+    return -1;
+
+  return fd;
+}
+/* Opens a file and returns the file descriptor */
+
+int
+_write_descriptor(int fd, const void * buf, size_t count) {
+  ssize_t bytes;
+
+  bytes = write(fd, buf, count);
+
+  if (bytes < 0) {
+    if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN) {
+      return _write_descriptor(fd, buf + bytes, count - bytes);
+    }
+    else {
+      perror("_write_descriptor : error writing");
+      return -1;
+    }
+  }
+
+  return 0;
+}
+/* Writes all bytes to a file descriptor */
+
+int
+_count_lines(int fd) {
+  int lines;
+  char buf[2];
+
+  lines = 0;
+  while (read(fd, buf, 1) > 0) {
+    if (buf[0] == '\n')
+      lines++;
+  }
+
+  return lines;
+}
+/* Counts the lines on a file descriptor */
+
+int
+_create_set(struct _set * s, char * basename, int maxlines) {
+  char * filename;
+  int index, lines;
+  int fd;
+
+  index = 0;
+  s->s_basename = malloc(sizeof(char) * (strlen(basename) + 1));
+  strcpy(s->s_basename, basename);
+  s->s_maxlines = maxlines;
+
+  filename = NULL;
+search:
+  free(filename);
+  filename = _create_name(basename, index);
+  if (_file_exists(filename) == 1) {
+    if ((fd = _open_file(filename, O_RDWR)) < 0) {
+      perror("_create_set : error opening file descriptor");
+      return -1;
+    }
+    if ((lines = _count_lines(fd)) < maxlines) {
+      goto found;
+    }
+    else {
+      index++;
+      goto search;
+    }
+  }
+  else {
+    if ((fd = _open_file(filename, O_WRONLY | O_APPEND | O_CREAT)) < 0) {
+      perror("_create_set : error opening file descriptor");
+      return -2;
+    }
+    lines = 0;
+  }
+
+found:
+  free(filename);
+  s->s_index = index;
+  s->s_lines = lines;
+
+  return fd;
+}
+/* Creates the set filedescriptor and sets the index and lines parameters */
 
 int
 _add_log(struct _log * l) {
@@ -143,38 +270,8 @@ _get_log(int numlog) {
 }
 
 int
-_open_file(const char * filename) {
-  int fd;
-
-  if ((fd = open(filename, O_WRONLY | O_APPEND | O_CREAT, 0644)) < 0)
-    return -1;
-
-  return fd;
-}
-/* Opens a file and returns the file descriptor */
-
-int
-_write_descriptor(int fd, const void * buf, size_t count) {
-  ssize_t bytes;
-
-  bytes = write(fd, buf, count);
-
-  if (bytes < 0) {
-    if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN) {
-      return _write_descriptor(fd, buf + bytes, count - bytes);
-    }
-    else {
-      perror("_write_descriptor : error writing");
-      return -1;
-    }
-  }
-
-  return 0;
-}
-/* Writes all bytes to a file descriptor */
-
-int
 _write_log(struct _args * argv) {
+  int retval;
   struct _log * l = argv->a_l;
   const void * buf = argv->a_buf;
   free(argv);
@@ -183,27 +280,54 @@ _write_log(struct _args * argv) {
 
   if (sem_wait(l->l_write) != 0) {
     perror("_write_log : error waiting for semaphore");
-    return -1;
+    retval = -1;
+    goto post;
   }
 
   size = (ssize_t)strlen(buf);
 
   if (_write_descriptor(l->l_fd, buf, size) < 0) {
     perror("_write_log : error writing to descriptor");
-    return -2;
+    retval = -2;
+    goto post;
   }
 
   if (_write_descriptor(l->l_fd, "\n", 1) < 0) {
     perror("_write_log : error writing new line to descriptor");
-    return -3;
+    retval = -3;
+    goto post;
   }
 
+  if (l->l_set != NULL) {
+    l->l_set->s_lines++;
+    if (l->l_set->s_lines >= l->l_set->s_maxlines) {
+      char * filename;
+      int fd;
+      if (close(l->l_fd) != 0) {
+        perror("_write_log : error closing file");
+        retval = -4;
+      }
+      l->l_set->s_index++;
+      filename = _create_name(l->l_set->s_basename, l->l_set->s_index);
+      if ((fd = _open_file(filename, O_WRONLY | O_APPEND | O_CREAT)) < 0) {
+        perror("_write_log : error opening file descriptor");
+        retval = -5;
+      }
+      free(filename);
+      l->l_set->s_lines = 0;
+      l->l_fd = fd;
+    }
+  }
+
+  retval = 0;
+
+post:
   if (sem_post(l->l_write) != 0) {
     perror("_write_log : error posting semaphore");
-    return -3;
+    return -6;
   }
 
-  return 0;
+  return retval;
 }
 /* Writes to a log */
 
@@ -213,7 +337,7 @@ yalogfd(int fd) {
   int index;
 
   l = malloc(sizeof(struct _log));
-  if (_create_log(l, fd, 1) < 0) {
+  if (_create_log(l, fd, 1, NULL) < 0) {
     perror("yalogfn : error creating log");
     return -2;
   }
@@ -229,13 +353,13 @@ yalogfn(char * filename) {
   struct _log * l;
   int fd, index;
 
-  if ((fd = _open_file(filename)) < 0) {
+  if ((fd = _open_file(filename, O_WRONLY | O_APPEND | O_CREAT)) < 0) {
     perror("yalogfn : error opening file descriptor");
     return -1;
   }
 
   l = malloc(sizeof(struct _log));
-  if (_create_log(l, fd, 1) < 0) {
+  if (_create_log(l, fd, 1, NULL) < 0) {
     perror("yalogfn : error creating log");
     return -2;
   }
@@ -245,6 +369,30 @@ yalogfn(char * filename) {
   return index;
 }
 /* Initializes an instance of the logger with a filename */
+
+int
+yalogml(char * basename, int maxlines) {
+  struct _log * l;
+  struct _set * s;
+  int fd, index;
+
+  s = malloc(sizeof(struct _set));
+  if ((fd = _create_set(s, basename, maxlines)) < 0) {
+    perror("yalogml : error creating set");
+    return -2;
+  }
+
+  l = malloc(sizeof(struct _log));
+  if (_create_log(l, fd, 1, s) < 0) {
+    perror("yalogml : error creating log");
+    return -3;
+  }
+
+  index = _add_log(l);
+
+  return index;
+}
+/* Creates logs with a maximum amount of lines */
 
 int
 yalog_sync_write(int numlog, const char * buf) {
@@ -332,6 +480,12 @@ yalog_close(int numlog) {
       retval = -4;
     }
   }
+
+  if (l->l_set != NULL) {
+    free(l->l_set->s_basename);
+    free(l->l_set);
+  }
+  l->l_set = NULL;
 
   free(l);
   l = NULL;

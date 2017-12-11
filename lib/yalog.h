@@ -33,6 +33,9 @@ int yalogfd(int fd);
 int yalogfn(char * filename);
 /* Initializes an instance of the logger with a filename */
 
+int yalogml(char * basename, int maxlines);
+/* Creates logs with a maximum amount of lines */
+
 int yalog_sync_write(int numlog, const char * buf);
 /* Writes to log sync */
 
