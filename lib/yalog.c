@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
 #include <math.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -76,6 +77,18 @@ static int _len = 0;
 
 static struct _log ** _logs;
 /* Array containing all log pointers */
+
+void
+_get_time(char * s, size_t len) {
+  time_t timer;
+  struct tm * tm_info;
+
+  time(&timer);
+  tm_info = localtime(&timer);
+
+  strftime(s, len, "%Y-%m-%dT%H:%M:%S", tm_info);
+}
+/* Returns the actual ISO 8601 time representation */
 
 int
 _create_log(struct _log * l, int fd, int isfile, struct _set * s) {
@@ -272,6 +285,7 @@ _get_log(int numlog) {
 int
 _write_log(struct _args * argv) {
   int retval;
+  char timestamp[27];
   struct _log * l = argv->a_l;
   const void * buf = argv->a_buf;
   free(argv);
@@ -281,6 +295,25 @@ _write_log(struct _args * argv) {
   if (sem_wait(l->l_write) != 0) {
     perror("_write_log : error waiting for semaphore");
     retval = -1;
+    goto post;
+  }
+
+  if (_write_descriptor(l->l_fd, "[", 1) < 0) {
+    perror("_write_log : error writing to descriptor");
+    retval = -2;
+    goto post;
+  }
+
+  _get_time(timestamp, 26);
+  if (_write_descriptor(l->l_fd, timestamp, strlen(timestamp)) < 0) {
+    perror("_write_log : error writing to descriptor");
+    retval = -2;
+    goto post;
+  }
+
+  if (_write_descriptor(l->l_fd, "]: ", 3) < 0) {
+    perror("_write_log : error writing to descriptor");
+    retval = -2;
     goto post;
   }
 
