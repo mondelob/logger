@@ -28,24 +28,24 @@
 #define YALOG_H
 
 int yalogfd(int fd);
-/* Initializes an instance of the logger with an open file descriptor */
+/* Creates a log given it's file descriptor and returns the index of the log */
 
-int yalogfn(char * filename);
-/* Initializes an instance of the logger with a filename */
+int yalogfn(char * fname);
+/* Creates a log given a file name and returns the index of the log */
 
-int yalogml(char * basename, int maxlines);
-/* Creates logs with a maximum amount of lines */
+int yalogml(char * bname, int mlines);
+/* Creates a log with a maximum amount of lines per file */
 
 int yalog_sync_write(int numlog, const char * buf);
-/* Writes to log sync */
-
-int yalog_async_write(int numlog, const char * buf);
-/* Writes to log async */
+/* Writes a message to the log synchronous */
 
 int yalog_close(int numlog);
-/* Closes a single log */
+/* Closes the log and clears all the memory used by the log */
 
 int yalog_end();
-/* Ends all the logs and frees all the memory */
+/* Closes all the logs and clears all the memory used by yalog */
+
+// int yalog_async_write(int numlog, const char * buf);
+/* Writes to log async */
 
 #endif
