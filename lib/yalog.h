@@ -27,22 +27,30 @@
 #ifndef YALOG_H
 #define YALOG_H
 
-int yalogfd(int fd);
-/* Creates a log given it's file descriptor and returns the index of the log */
+int yalogfd(const int fd);
+/* Creates a log given it's file descriptor */
 
-int yalogfn(char * fname);
+int endlog(int index);
+/* Closes a log and all of it's resources */
+
+void showlogs();
+
+int delyalog();
+/* Clears all the memory used by yalog */
+
+// int yalogfn(char * fname);
 /* Creates a log given a file name and returns the index of the log */
 
-int yalogml(char * bname, int mlines);
+// int yalogml(char * bname, int mlines);
 /* Creates a log with a maximum amount of lines per file */
 
-int yalog_sync_write(int numlog, const char * buf);
+// int yalog_sync_write(int numlog, const char * buf);
 /* Writes a message to the log synchronous */
 
-int yalog_close(int numlog);
+// int yalog_close(int numlog);
 /* Closes the log and clears all the memory used by the log */
 
-int yalog_end();
+// int yalog_end();
 /* Closes all the logs and clears all the memory used by yalog */
 
 // int yalog_async_write(int numlog, const char * buf);
